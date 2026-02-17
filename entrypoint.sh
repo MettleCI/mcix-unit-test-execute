@@ -1,12 +1,19 @@
-#!/bin/sh -l
+#!/bin/sh
+# Don't use -l here; we want to preserve the PATH and other env vars 
+# as set in the base image, and not have it overridden by a login shell
 
-
+# ███╗   ███╗███████╗████████╗████████╗██╗     ███████╗ ██████╗██╗
+# ████╗ ████║██╔════╝╚══██╔══╝╚══██╔══╝██║     ██╔════╝██╔════╝██║
+# ██╔████╔██║█████╗     ██║      ██║   ██║     █████╗  ██║     ██║
+# ██║╚██╔╝██║██╔══╝     ██║      ██║   ██║     ██╔══╝  ██║     ██║
+# ██║ ╚═╝ ██║███████╗   ██║      ██║   ███████╗███████╗╚██████╗██║
+# ╚═╝     ╚═╝╚══════╝   ╚═╝      ╚═╝   ╚══════╝╚══════╝ ╚═════╝╚═╝
+# MettleCI DevOps for DataStage       (C) 2025-2026 Data Migrators
 #              _ _        _            _
 #  _   _ _ __ (_) |_     | |_ ___  ___| |_
 # | | | | '_ \| | __|____| __/ _ \/ __| __|
 # | |_| | | | | | ||_____| ||  __/\__ \ |_
 #  \__,_|_| |_|_|\__|     \__\___||___/\__|
-# 
 #                           _
 #   _____  _____  ___ _   _| |_ ___
 #  / _ \ \/ / _ \/ __| | | | __/ _ \
@@ -16,60 +23,137 @@
 
 set -eu
 
-# Failure handling utility function
-die() { echo "$*" 1>&2 ; exit 1; }
+# Import MettleCI GitHub Actions utility functions
+. "/usr/share//mcix/common.sh"
 
-MCIX_BIN_DIR="/usr/share/mcix/bin"
-MCIX_CMD="$MCIX_BIN_DIR/mcix"
-PATH="$PATH:$MCIX_BIN_DIR"
+# -----
+# Setup
+# -----
+export MCIX_BIN_DIR="/usr/share/mcix/bin"
+export MCIX_CMD="mcix" 
+export MCIX_JUNIT_CMD="/usr/share/mcix/mcix-junit-to-summary"
+export MCIX_JUNIT_CMD_OPTIONS="--annotations"
+# Make us immune to runner differences or potential base-image changes
+export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:$MCIX_BIN_DIR"
 
-# Validate required vars
-: "${PARAM_API_KEY:?Missing required input: api-key}"
-: "${PARAM_URL:?Missing required input: url}"
-: "${PARAM_USER:?Missing required input: user}"
-: "${PARAM_REPORT:?Missing required input: report}"
+: "${GITHUB_OUTPUT:?GITHUB_OUTPUT must be set}"
 
-# Optional arguments
+# We'll store the real command status here so the trap can see it
+MCIX_STATUS=0
+
+# -------------------
+# Validate parameters
+# -------------------
+
+require PARAM_API_KEY "api-key"
+require PARAM_URL "url"
+require PARAM_USER "user"
+require PARAM_REPORT "report"
+
+# Ensure PARAM_REPORT will always be /github/workspace/...
+PARAM_REPORT="$(resolve_report_path "$PARAM_REPORT")"
+mkdir -p "$(dirname "$PARAM_REPORT")"
+report_display="${PARAM_REPORT#${GITHUB_WORKSPACE:-/github/workspace}/}"
+
+# ------------------------
+# Build command to execute
+# ------------------------
+
+# Start argv
+set -- "$MCIX_CMD" unit-test execute
+
+# Core flags
+set -- "$@" -api-key "$PARAM_API_KEY"
+set -- "$@" -url "$PARAM_URL"
+set -- "$@" -user "$PARAM_USER"
+set -- "$@" -report "$PARAM_REPORT"
+
+# Mutually exclusive project / project-id handling (safe with set -u)
 PROJECT="${PARAM_PROJECT:-}"
 PROJECT_ID="${PARAM_PROJECT_ID:-}"
+choose_project
+[ -n "$PROJECT" ]    && set -- "$@" -project "$PROJECT"
+[ -n "$PROJECT_ID" ] && set -- "$@" -project-id "$PROJECT_ID"
 
-# 1) Fail if BOTH project and project-id were provided
-if [ -n "$PROJECT" ] && [ -n "$PROJECT_ID" ]; then
-  die "ERROR: Both 'project' and 'project-id' were provided. Please specify only one."
+# Optional flags
+
+# -max-concurrency (PARAM_MAX_CONCURRENCY)
+if [ -n "$PARAM_MAX_CONCURRENCY" ]; then
+  set -- "$@" -max-concurrency "$PARAM_MAX_CONCURRENCY"
 fi
 
-# 2) Fail if NEITHER project or project-id were provided
-if [ -z "$PROJECT" ] && [ -z "$PROJECT_ID" ]; then
-  die "ERROR: You must provide either 'project' or 'project-id'." 
+# -ignore-test-failures (PARAM_IGNORE_TEST_FAILURES)
+[ -n "$PARAM_IGNORE_TEST_FAILURES" ] && set -- "$@" -ignore-test-failures
+
+# -test-suite (PARAM_TEST_SUITE)
+if [ -n "$PARAM_TEST_SUITE" ]; then
+  set -- "$@" -test-suite "$PARAM_TEST_SUITE"
 fi
 
-# Build command to execute
-CMD="$MCIX_CMD unit-test execute \
- -api-key \"$PARAM_API_KEY\" \
- -url \"$PARAM_URL\" \
- -user \"$PARAM_USER\" \
- -report \"$PARAM_REPORT\""
+# ------------
+# Step summary
+# ------------
+write_step_summary() {
+  # Do we have a variable pointing to a JUnit XML file?
+  if [ -z "${PARAM_REPORT:-}" ] || [ ! -f "$PARAM_REPORT" ]; then
+    gh_warn "JUnit XML file not found" "Path: ${PARAM_REPORT:-<unset>}"
 
-# Add optional project/project-id
-[ -n "$PROJECT" ] && CMD="$CMD -project \"$PROJECT\""
-[ -n "$PROJECT_ID" ] && CMD="$CMD -project-id \"$PROJECT_ID\""
+  # Do we have a junit-to-summary command available?
+  elif [ -z "${MCIX_JUNIT_CMD:-}" ] || [ ! -x "$MCIX_JUNIT_CMD" ]; then
+    gh_warn "JUnit summarizer not executable" "Command: ${MCIX_JUNIT_CMD:-<unset>}"
 
-# Add optional argument flags
-[ -n "$PARAM_MAX_CONCURRENCY" ] && CMD="$CMD -max-concurrency $PARAM_MAX_CONCURRENCY"
+  # Did GitHub provide a writable summary file?
+  elif [ -z "${GITHUB_STEP_SUMMARY:-}" ] || [ ! -w "$GITHUB_STEP_SUMMARY" ]; then
+    gh_warn "GITHUB_STEP_SUMMARY not writable" "Skipping JUnit summary generation."
 
-# Test suite name
-[ -n "$PARAM_TEST_SUITE" ] && CMD="$CMD -test-suite \"$PARAM_TEST_SUITE\""
+  # Generate summary
+  else
+    # Commenting out for now (too verbose.)
+    # gh_notice "Generating step summary" "Running JUnit summarizer and appending to GITHUB_STEP_SUMMARY."
 
-# Ignore test failures
-[ -n "$PARAM_IGNORE_TEST_FAILURES" ] && CMD="$CMD -ignore-test-failures"
+    # mcix-junit-to-summary [--annotations] [--max-annotations N] <junit.xml> [title]
+    echo "Executing: $MCIX_JUNIT_CMD $MCIX_JUNIT_CMD_OPTIONS $PARAM_REPORT \"MCIX DataStage Compile\""
+    "$MCIX_JUNIT_CMD" \
+      "$MCIX_JUNIT_CMD_OPTIONS" \
+      "$PARAM_REPORT" \
+      "MCIX DataStage Compile"  >> "$GITHUB_STEP_SUMMARY" || \
+      gh_warn "JUnit summarizer failed" "Continuing without failing the action."
+  fi
+}
 
-echo "Executing: $CMD"
+# ---------
+# Exit trap
+# ---------
+write_return_code_and_summary() {
+  # Prefer MCIX_STATUS if set; fall back to $?
+  rc=${MCIX_STATUS:-$?}
 
-# Execute the command
-# shellcheck disable=SC2086
-sh -c "$CMD"
-status=$?
+  echo "return-code=$rc" >>"$GITHUB_OUTPUT"
+  echo "junit-path=$report_display" >>"$GITHUB_OUTPUT"
 
-echo "return-code=$status" >> "$GITHUB_OUTPUT"
-echo "report=$PARAM_REPORT" >> "$GITHUB_OUTPUT"
-exit "$status"
+  [ -z "${GITHUB_STEP_SUMMARY:-}" ] && return
+
+  write_step_summary
+}
+trap write_return_code_and_summary EXIT
+
+# -------
+# Execute
+# -------
+# Check the repository has been checked out
+if [ ! -e "/github/workspace/.git" ]; then
+  die "Repo contents not found in /github/workspace. Did you forget to run actions/checkout before this action?"
+fi
+
+
+
+# Run the command, capture its output and status, but don't let `set -e` kill us.
+set +e
+"$@" 2>&1
+MCIX_STATUS=$?
+set -e
+
+# Let the trap handle writing outputs & step summary
+exit "$MCIX_STATUS"
+
+
