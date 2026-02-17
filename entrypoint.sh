@@ -71,7 +71,7 @@ set -- "$@" -report "$PARAM_REPORT"
 # Mutually exclusive project / project-id handling (safe with set -u)
 PROJECT="${PARAM_PROJECT:-}"
 PROJECT_ID="${PARAM_PROJECT_ID:-}"
-choose_project
+validate_project
 [ -n "$PROJECT" ]    && set -- "$@" -project "$PROJECT"
 [ -n "$PROJECT_ID" ] && set -- "$@" -project-id "$PROJECT_ID"
 
