@@ -30,6 +30,7 @@ set -eu
 # Setup
 # -----
 export MCIX_BIN_DIR="/usr/share/mcix/bin"
+export MCIX_LOG_DIR="/usr/share/mcix"
 export MCIX_CMD="mcix" 
 export MCIX_JUNIT_CMD="/usr/share/mcix/mcix-junit-to-summary"
 export MCIX_JUNIT_CMD_OPTIONS="--annotations"
@@ -101,12 +102,13 @@ write_step_summary() {
      [ -n "${GITHUB_STEP_SUMMARY:-}" ] && [ -w "$GITHUB_STEP_SUMMARY" ]; then
     {
       echo ""
-      echo "### :error: There was an error running the command (ID **${MCIX_LOGGED_ERROR_ID}**)"
+      echo "### :error: There was an error logged while running the command."
       if [ -n "${MCIX_LOGGED_ERROR_ID:-}" ]; then
-        echo "- It has been logged (ID **${MCIX_LOGGED_ERROR_ID}**)."
         # Capture the log entry and include it in the summary for visibility. 
         # This is because some errors are "logged and continued" rather than causing an 
         # immediate failure, and we don't want them to be missed.
+        echo "ID **${MCIX_LOGGED_ERROR_ID}**"
+        cat ${MCIX_LOG_DIR}/*.log | grep "${MCIX_LOGGED_ERROR_ID}" || echo "(Failed to extract log details for ID ${MCIX_LOGGED_ERROR_ID})"
       fi
       echo ""
     } >>"$GITHUB_STEP_SUMMARY"
