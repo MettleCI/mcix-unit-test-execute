@@ -102,13 +102,20 @@ write_step_summary() {
      [ -n "${GITHUB_STEP_SUMMARY:-}" ] && [ -w "$GITHUB_STEP_SUMMARY" ]; then
     {
       echo ""
-      echo "### :error: There was an error logged while running the command."
+      echo "> **❌ Error:** There was an error logged while running the command."
+      echo ""
+
+      # Register a pipeline annotation for visibility. This will show up in the "Annotations" tab 
+      # but it won't fail the action on its own (since some errors are "log and continue".)
+      gh_error "MCIX failure" "There was an error logged while running 'mcix unit-test execute'"
+
       if [ -n "${MCIX_LOGGED_ERROR_ID:-}" ]; then
         # Capture the log entry and include it in the summary for visibility. 
-        # This is because some errors are "logged and continued" rather than causing an 
-        # immediate failure, and we don't want them to be missed.
         echo "ID **${MCIX_LOGGED_ERROR_ID}**"
-        cat ${MCIX_LOG_DIR}/*.log | grep "${MCIX_LOGGED_ERROR_ID}" || echo "(Failed to extract log details for ID ${MCIX_LOGGED_ERROR_ID})"
+        cat ${MCIX_LOG_DIR}/*.log \
+          | grep "${MCIX_LOGGED_ERROR_ID}" \
+          | sed 's/.*): //' \
+          || echo "(Failed to extract log details for ID ${MCIX_LOGGED_ERROR_ID})"
       fi
       echo ""
     } >>"$GITHUB_STEP_SUMMARY"
