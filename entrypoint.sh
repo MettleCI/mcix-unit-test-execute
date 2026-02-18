@@ -40,6 +40,8 @@ export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:$MCIX_
 
 # We'll store the real command status here so the trap can see it
 MCIX_STATUS=0
+# Populated if command output matches: "It has been logged (ID ...)"
+MCIX_LOGGED_ERROR_ID=""
 
 # -------------------
 # Validate parameters
@@ -78,15 +80,15 @@ validate_project
 # Optional flags
 
 # -max-concurrency (PARAM_MAX_CONCURRENCY)
-if [ -n "$PARAM_MAX_CONCURRENCY" ]; then
+if [ -n "${PARAM_MAX_CONCURRENCY:-}" ]; then
   set -- "$@" -max-concurrency "$PARAM_MAX_CONCURRENCY"
 fi
 
 # -ignore-test-failures (PARAM_IGNORE_TEST_FAILURES)
-[ -n "$PARAM_IGNORE_TEST_FAILURES" ] && set -- "$@" -ignore-test-failures
+[ -n "${PARAM_IGNORE_TEST_FAILURES:-}" ] && set -- "$@" -ignore-test-failures
 
 # -test-suite (PARAM_TEST_SUITE)
-if [ -n "$PARAM_TEST_SUITE" ]; then
+if [ -n "${PARAM_TEST_SUITE:-}" ]; then
   set -- "$@" -test-suite "$PARAM_TEST_SUITE"
 fi
 
@@ -94,6 +96,22 @@ fi
 # Step summary
 # ------------
 write_step_summary() {
+  # Surface "logged error ID" failures (if detected)
+  if [ -n "${MCIX_LOGGED_ERROR_ID:-}" ] && \
+     [ -n "${GITHUB_STEP_SUMMARY:-}" ] && [ -w "$GITHUB_STEP_SUMMARY" ]; then
+    {
+      echo ""
+      echo "### :error: There was an error running the command (ID **${MCIX_LOGGED_ERROR_ID}**)"
+      if [ -n "${MCIX_LOGGED_ERROR_ID:-}" ]; then
+        echo "- It has been logged (ID **${MCIX_LOGGED_ERROR_ID}**)."
+        # Capture the log entry and include it in the summary for visibility. 
+        # This is because some errors are "logged and continued" rather than causing an 
+        # immediate failure, and we don't want them to be missed.
+      fi
+      echo ""
+    } >>"$GITHUB_STEP_SUMMARY"
+  fi
+
   # Do we have a variable pointing to a JUnit XML file?
   if [ -z "${PARAM_REPORT:-}" ] || [ ! -f "$PARAM_REPORT" ]; then
     gh_warn "JUnit XML file not found" "Path: ${PARAM_REPORT:-<unset>}"
@@ -135,7 +153,6 @@ write_return_code_and_summary() {
 
   write_step_summary
 }
-trap write_return_code_and_summary EXIT
 
 # -------
 # Execute
@@ -145,15 +162,24 @@ if [ ! -e "/github/workspace/.git" ]; then
   die "Repo contents not found in /github/workspace. Did you forget to run actions/checkout before this action?"
 fi
 
+# Capture output so we can detect "It has been logged (ID ...)" failures.
+tmp_out="$(mktemp)"
+cleanup() { rm -f "$tmp_out"; }
 
+# Combine summary/output writing + temp cleanup in a single EXIT trap.
+trap 'write_return_code_and_summary; cleanup' EXIT
 
 # Run the command, capture its output and status, but don't let `set -e` kill us.
 set +e
-"$@" 2>&1
+"$@" 2>&1 | tee "$tmp_out"
 MCIX_STATUS=$?
 set -e
 
-# Let the trap handle writing outputs & step summary
+# If the known "logged error" signature occurred, stash details for the summary.
+MCIX_LOGGED_ERROR_ID=""
+if mcix_has_logged_error "$tmp_out"; then
+  MCIX_LOGGED_ERROR_ID="$(mcix_extract_logged_error_id "$tmp_out")"
+fi
+
+# Let the trap handle outputs & summary using MCIX_STATUS
 exit "$MCIX_STATUS"
-
-
