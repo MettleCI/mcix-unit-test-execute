@@ -101,24 +101,19 @@ write_step_summary() {
   if [ -n "${MCIX_LOGGED_ERROR_ID:-}" ] && \
      [ -n "${GITHUB_STEP_SUMMARY:-}" ] && [ -w "$GITHUB_STEP_SUMMARY" ]; then
     {
-      echo ""
       echo "> **❌ Error:** There was an error logged while running the command."
-      echo ""
-
-      # Register a pipeline annotation for visibility. This will show up in the "Annotations" tab 
-      # but it won't fail the action on its own (since some errors are "log and continue".)
-      gh_error "MCIX failure" "There was an error logged while running 'mcix unit-test execute'"
-
       if [ -n "${MCIX_LOGGED_ERROR_ID:-}" ]; then
         # Capture the log entry and include it in the summary for visibility. 
-        echo "ID **${MCIX_LOGGED_ERROR_ID}**"
         cat ${MCIX_LOG_DIR}/*.log \
-          | grep "${MCIX_LOGGED_ERROR_ID}" \
+          | grep "(ID ${MCIX_LOGGED_ERROR_ID}" \
           | sed 's/.*): //' \
           || echo "(Failed to extract log details for ID ${MCIX_LOGGED_ERROR_ID})"
       fi
       echo ""
     } >>"$GITHUB_STEP_SUMMARY"
+    # Set a workflow error annotation for visibility. This will show up in the 'Annotations' tab 
+    # but it won't fail the action on its own (since some errors are "log and continue".)
+    gh_error "MCIX failure" "There was an error logged while running 'mcix unit-test execute'"
   fi
 
   # Do we have a variable pointing to a JUnit XML file?
