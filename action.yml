@@ -70,6 +70,10 @@ inputs:
     description: 'The test suite name for this invocation of unit testing'
     required: false
     default: 'mcix tests'
+  run-all:
+    description: 'Skips incremental behavior and runs all unit tests (true/false)'
+    required: false
+    default: true        # Optional boolean input; if not provided, defaults to true
 
 outputs:
   return-code:
