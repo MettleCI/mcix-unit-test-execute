@@ -98,8 +98,6 @@ if [ "$(normalise_bool "${PARAM_RUN_ALL:-0}")" -eq 1 ]; then
   set -- "$@" -run-all
 fi
 
-echo $@
-
 # ------------
 # Step summary
 # ------------
