@@ -185,6 +185,8 @@ set -e
 MCIX_LOGGED_ERROR_ID=""
 if mcix_has_logged_error "$tmp_out"; then
   MCIX_LOGGED_ERROR_ID="$(mcix_extract_logged_error_id "$tmp_out")"
+  # Treat logged errors as failures for the purpose of the step summary, even if the command itself didn't return a non-zero code.
+  MCIX_STATUS=1
 fi
 
 # Let the trap handle outputs & summary using MCIX_STATUS
