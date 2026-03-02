@@ -138,11 +138,11 @@ write_step_summary() {
     # gh_notice "Generating step summary" "Running JUnit summarizer and appending to GITHUB_STEP_SUMMARY."
 
     # mcix-junit-to-summary [--annotations] [--max-annotations N] <junit.xml> [title]
-    echo "Executing: $MCIX_JUNIT_CMD $MCIX_JUNIT_CMD_OPTIONS $PARAM_REPORT \"MCIX DataStage Compile\""
+    echo "Executing: $MCIX_JUNIT_CMD $MCIX_JUNIT_CMD_OPTIONS $PARAM_REPORT $PARAM_TEST_SUITE"
     "$MCIX_JUNIT_CMD" \
       "$MCIX_JUNIT_CMD_OPTIONS" \
       "$PARAM_REPORT" \
-      "MCIX DataStage Compile"  >> "$GITHUB_STEP_SUMMARY" || \
+      "$PARAM_TEST_SUITE"  >> "$GITHUB_STEP_SUMMARY" || \
       gh_warn "JUnit summarizer failed" "Continuing without failing the action."
   fi
 }
