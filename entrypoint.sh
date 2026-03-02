@@ -93,9 +93,9 @@ if [ -n "${PARAM_TEST_SUITE:-}" ]; then
   set -- "$@" -test-suite "$PARAM_TEST_SUITE"
 fi
 
-# -run-all (PARAM_RUN_ALL)
-if [ -n "${PARAM_RUN_ALL:-}" ]; then
-  set -- "$@" -run-all "$PARAM_RUN_ALL"
+# -run-all
+if [ "$(normalise_bool "${PARAM_RUN_ALL:-0}")" -eq 1 ]; then
+  set -- "$@" -run-all
 fi
 
 # ------------
