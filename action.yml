@@ -94,3 +94,4 @@ runs:
     PARAM_IGNORE_TEST_FAILURES: ${{ inputs.ignore-test-failures }}
     PARAM_MAX_CONCURRENCY: ${{ inputs.max-concurrency }}
     PARAM_TEST_SUITE: ${{ inputs.test-suite }}
+    PARAM_RUN_ALL: ${{ inputs.run-all }}
