@@ -62,7 +62,8 @@ report_display="${PARAM_REPORT#${GITHUB_WORKSPACE:-/github/workspace}/}"
 # ------------------------
 
 # Start argv
-set -- "$MCIX_CMD_NAME"
+# There are GOOD REASONS we don't use MCIX_CMD_NAME here.
+set -- mcix unit-test execute
 
 # Core flags
 set -- "$@" -api-key "$PARAM_API_KEY"
