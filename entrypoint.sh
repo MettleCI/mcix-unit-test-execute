@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/usr/bin/env bash
 # Don't use -l here; we want to preserve the PATH and other env vars 
 # as set in the base image, and not have it overridden by a login shell
 
@@ -21,7 +21,7 @@
 #  \___/_/\_\___|\___|\__,_|\__\___|
 # 
 
-set -eu
+set -euo pipefail
 
 # Import MettleCI GitHub Actions utility functions
 . "/usr/share/mcix/common.sh"
@@ -29,13 +29,12 @@ set -eu
 # -----
 # Setup
 # -----
+export MCIX_CMD_NAME="mcix unit-test execute"
 export MCIX_BIN_DIR="/usr/share/mcix/bin"
 export MCIX_LOG_DIR="/usr/share/mcix"
-export MCIX_CMD="mcix" 
 export MCIX_JUNIT_CMD="/usr/share/mcix/mcix-junit-to-summary"
 export MCIX_JUNIT_CMD_OPTIONS="--annotations"
-# Make us immune to runner differences or potential base-image changes
-export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:$MCIX_BIN_DIR"
+export PATH="$PATH:$MCIX_BIN_DIR"
 
 : "${GITHUB_OUTPUT:?GITHUB_OUTPUT must be set}"
 
@@ -63,7 +62,7 @@ report_display="${PARAM_REPORT#${GITHUB_WORKSPACE:-/github/workspace}/}"
 # ------------------------
 
 # Start argv
-set -- "$MCIX_CMD" unit-test execute
+set -- "$MCIX_CMD_NAME"
 
 # Core flags
 set -- "$@" -api-key "$PARAM_API_KEY"
@@ -130,11 +129,8 @@ write_step_summary() {
   elif [ -z "${GITHUB_STEP_SUMMARY:-}" ] || [ ! -w "$GITHUB_STEP_SUMMARY" ]; then
     gh_warn "GITHUB_STEP_SUMMARY not writable" "Skipping JUnit summary generation."
 
-  # Generate summary
   else
-    # Commenting out for now (too verbose.)
-    # gh_notice "Generating step summary" "Running JUnit summarizer and appending to GITHUB_STEP_SUMMARY."
-
+    # Generate summary
     # mcix-junit-to-summary [--annotations] [--max-annotations N] <junit.xml> [title]
     echo "Executing: $MCIX_JUNIT_CMD $MCIX_JUNIT_CMD_OPTIONS $PARAM_REPORT $PARAM_TEST_SUITE"
     "$MCIX_JUNIT_CMD" \
@@ -159,6 +155,8 @@ write_return_code_and_summary() {
 
   write_step_summary
 }
+# Combine summary/output writing + temp cleanup in a single EXIT trap.
+trap 'write_return_code_and_summary; cleanup' EXIT
 
 # -------
 # Execute
@@ -171,9 +169,6 @@ fi
 # Capture output so we can detect "It has been logged (ID ...)" failures.
 tmp_out="$(mktemp)"
 cleanup() { rm -f "$tmp_out"; }
-
-# Combine summary/output writing + temp cleanup in a single EXIT trap.
-trap 'write_return_code_and_summary; cleanup' EXIT
 
 # Run the command, capture its output and status, but don't let `set -e` kill us.
 set +e
