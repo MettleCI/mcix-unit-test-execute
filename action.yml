@@ -21,9 +21,9 @@
 
 name: 'mcix unit-test execute action'
 author: 'Data Migrators Pty Ltd'
-description: 'Runs mcix unit-test execute'
+description: 'Execute MettleCI unit tests in an IBM DataStage project on IBM Software Hub (Cloud Pak) using the MettleCI MCIX CLI'
 branding:
-  icon: 'zap'
+  icon: 'check-square'
   color: 'blue'
 
 # Note that true/false boolean inputs accept:
