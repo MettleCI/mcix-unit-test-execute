@@ -47,7 +47,7 @@ See https://nextgen.mettleci.io/mettleci-cli/unit-test-namespace/#unit-test-exec
 <!-- BEGIN MCIX-ACTION-DOCS -->
 # mcix unit-test execute action
 
-Runs mcix unit-test execute
+Execute MettleCI unit tests in an IBM DataStage project on IBM Software Hub (Cloud Pak) using the MettleCI MCIX CLI
 
 > Namespace: `unit-test`<br>
 > Action: `execute`<br>
