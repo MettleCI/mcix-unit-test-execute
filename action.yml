@@ -19,7 +19,7 @@
 #  \___/_/\_\___|\___|\__,_|\__\___|
 # 
 
-name: 'mcix unit-test execute action'
+name: 'MCIX Unit-Test Execute Action'
 author: 'Data Migrators Pty Ltd'
 description: 'Execute MettleCI unit tests in an IBM DataStage project on IBM Software Hub (Cloud Pak) using the MettleCI MCIX CLI'
 branding:
