@@ -45,7 +45,7 @@ Run DataStage unit tests managed by MCIX as part of CI/CD.
 See https://nextgen.mettleci.io/mettleci-cli/unit-test-namespace/#unit-test-execute
 
 <!-- BEGIN MCIX-ACTION-DOCS -->
-# MCIX Unit-Test Execute Action
+# MCIX Unit-Test Execute
 
 Execute MettleCI unit tests in an IBM DataStage project on IBM Software Hub (Cloud Pak) using the MettleCI MCIX CLI
 
@@ -70,7 +70,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v6
 
-      - name: Run MCIX Unit-Test Execute Action
+      - name: Run MCIX Unit-Test Execute
         id: unit-test-execute
         uses: ${{ github.repository }}/unit-test/execute@v1
         with:
