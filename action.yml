@@ -74,6 +74,9 @@ inputs:
     description: 'Skips incremental behavior and runs all unit tests (true/false)'
     required: false
     default: true        # Optional boolean input; if not provided, defaults to true
+  additionalArgs:
+    description: 'Additional raw arguments to append to the mcix command'
+    required: false
 
 outputs:
   return-code:
@@ -95,3 +98,4 @@ runs:
     PARAM_MAX_CONCURRENCY: ${{ inputs.max-concurrency }}
     PARAM_TEST_SUITE: ${{ inputs.test-suite }}
     PARAM_RUN_ALL: ${{ inputs.run-all }}
+    PARAM_ADDITIONAL_ARGS: ${{ inputs.additionalArgs }}
