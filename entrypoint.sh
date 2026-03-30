@@ -113,44 +113,42 @@ echo "$@"
 # Step summary
 # ------------
 write_step_summary() {
-#  {
-    # Surface "logged error ID" failures (if detected)
-    if [ -n "${MCIX_LOGGED_ERROR_ID:-}" ] && [ -w "$GITHUB_STEP_SUMMARY" ]; then
-      {
-        echo "**❌ Error:** There was an error logged while running the command."
-        if [ -n "${MCIX_LOGGED_ERROR_ID:-}" ]; then
-          # Capture the log entry and include it in the summary for visibility. 
-          grep "(ID ${MCIX_LOGGED_ERROR_ID}" ${MCIX_LOG_DIR}/*.log | sed -n 's/.*(ID [^)]*): //p' \
-            || echo "(Failed to extract log details for ID ${MCIX_LOGGED_ERROR_ID})"
-        fi
-      } 
-      #>>"$GITHUB_STEP_SUMMARY"
+  # Surface "logged error ID" failures (if detected)
+  if [ -n "${MCIX_LOGGED_ERROR_ID:-}" ] && [ -w "$GITHUB_STEP_SUMMARY" ]; then
+    {
+      echo "**❌ Error:** There was an error logged while running the command."
+      if [ -n "${MCIX_LOGGED_ERROR_ID:-}" ]; then
+        # Capture the log entry and include it in the summary for visibility. 
+        grep "(ID ${MCIX_LOGGED_ERROR_ID}" ${MCIX_LOG_DIR}/*.log | sed -n 's/.*(ID [^)]*): //p' \
+          || echo "(Failed to extract log details for ID ${MCIX_LOGGED_ERROR_ID})"
+      fi
+    } >>"$GITHUB_STEP_SUMMARY"
 
-      # Set a workflow error annotation for visibility. This will show up in the 'Annotations' tab 
-      # but it won't fail the action on its own (since some errors are "log and continue".)
-      gh_error "$MCIX_CMD_NAME" "There was an error logged during the execution of '$MCIX_CMD_NAME'"
-    fi
+    # Set a workflow error annotation for visibility. This will show up in the 'Annotations' tab 
+    # but it won't fail the action on its own (since some errors are "log and continue".)
+    gh_error "$MCIX_CMD_NAME" "There was an error logged during the execution of '$MCIX_CMD_NAME'"
+  fi
 
-    # Do we have a variable pointing to a JUnit XML file?
-    if [ -z "${PARAM_REPORT:-}" ] || [ ! -f "$PARAM_REPORT" ]; then
-      gh_warn "JUnit XML file not found" "Path: ${PARAM_REPORT:-<unset>}"
-    # Do we have a mcix-junit-to-summary command available?
-    elif [ -z "${MCIX_JUNIT_CMD:-}" ] || [ ! -x "$MCIX_JUNIT_CMD" ]; then
-      gh_warn "JUnit summarizer not executable" "Command: ${MCIX_JUNIT_CMD:-<unset>}"
-    # Did GitHub provide a writable summary file?
-    elif [ ! -w "$GITHUB_STEP_SUMMARY" ]; then
-      gh_warn "GITHUB_STEP_SUMMARY not writable" "Skipping JUnit summary generation."
-    else
-      # Generate summary
-      # mcix-junit-to-summary [--annotations] [--max-annotations N] <junit.xml> [title]
-      "$MCIX_JUNIT_CMD" \
-        "$MCIX_JUNIT_CMD_OPTIONS" \
-        "$PARAM_REPORT" \
-        "$MCIX_CMD_NAME" || \
-        gh_warn "JUnit summarizer for '${MCIX_CMD_NAME}' failed" "Continuing without failing the action."
-    fi
+  # Do we have a variable pointing to a JUnit XML file?
+  if [ -z "${PARAM_REPORT:-}" ] || [ ! -f "$PARAM_REPORT" ]; then
+    gh_warn "JUnit XML file not found" "Path: ${PARAM_REPORT:-<unset>}"
+  # Do we have a mcix-junit-to-summary command available?
+  elif [ -z "${MCIX_JUNIT_CMD:-}" ] || [ ! -x "$MCIX_JUNIT_CMD" ]; then
+    gh_warn "JUnit summarizer not executable" "Command: ${MCIX_JUNIT_CMD:-<unset>}"
+  # Did GitHub provide a writable summary file?
+  elif [ ! -w "$GITHUB_STEP_SUMMARY" ]; then
+    gh_warn "GITHUB_STEP_SUMMARY not writable" "Skipping JUnit summary generation."
+  else
+    # Generate summary
+    # mcix-junit-to-summary [--annotations] [--max-annotations N] <junit.xml> [title]
+    "$MCIX_JUNIT_CMD" \
+      "$MCIX_JUNIT_CMD_OPTIONS" \
+      "$PARAM_REPORT" \
+      "$MCIX_CMD_NAME" >>"$GITHUB_STEP_SUMMARY" || \
+      gh_warn "JUnit summarizer for '${MCIX_CMD_NAME}' failed" "Continuing without failing the action."
+  fi
 
-    if [[ -f "${MCIX_LOG_DIR}/cli.$(date +%F).log" ]]; then
+  if [[ -f "${MCIX_LOG_DIR}/cli.$(date +%F).log" ]]; then
     {
       # Display the contents of the mcix command's log file. (collapsed by default)
       echo '<details>'
@@ -160,11 +158,10 @@ write_step_summary() {
       cat "${MCIX_LOG_DIR}/cli.$(date +%F).log"
       echo '```'
       echo '</details>'
-    }
-    # >>"$GITHUB_STEP_SUMMARY"
-    fi
+    } >>"$GITHUB_STEP_SUMMARY"
+  fi
 
-    if [[ -f "${MCIX_LOG_DIR}/exception.$(date +%F).log" ]]; then
+  if [[ -f "${MCIX_LOG_DIR}/exception.$(date +%F).log" ]]; then
     {
       # Display the contents of the mcix command's log file. (collapsed by default)
       echo '<details>'
@@ -174,10 +171,8 @@ write_step_summary() {
       cat "${MCIX_LOG_DIR}/exception.$(date +%F).log"
       echo '```'
       echo '</details>'
-    }
-    # >>"$GITHUB_STEP_SUMMARY"
-    fi
-#  } >> "$GITHUB_STEP_SUMMARY"
+    } >>"$GITHUB_STEP_SUMMARY"
+  fi
 }
 
 
