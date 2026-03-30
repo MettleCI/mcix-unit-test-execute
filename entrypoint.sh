@@ -123,7 +123,8 @@ write_step_summary() {
           grep "(ID ${MCIX_LOGGED_ERROR_ID}" ${MCIX_LOG_DIR}/*.log | sed -n 's/.*(ID [^)]*): //p' \
             || echo "(Failed to extract log details for ID ${MCIX_LOGGED_ERROR_ID})"
         fi
-      } >>"$GITHUB_STEP_SUMMARY"
+      } 
+      #>>"$GITHUB_STEP_SUMMARY"
 
       # Set a workflow error annotation for visibility. This will show up in the 'Annotations' tab 
       # but it won't fail the action on its own (since some errors are "log and continue".)
@@ -145,7 +146,7 @@ write_step_summary() {
       "$MCIX_JUNIT_CMD" \
         "$MCIX_JUNIT_CMD_OPTIONS" \
         "$PARAM_REPORT" \
-        "$MCIX_CMD_NAME" >>"$GITHUB_STEP_SUMMARY" || \
+        "$MCIX_CMD_NAME" || \
         gh_warn "JUnit summarizer for '${MCIX_CMD_NAME}' failed" "Continuing without failing the action."
     fi
 
@@ -159,7 +160,8 @@ write_step_summary() {
       cat "${MCIX_LOG_DIR}/cli.$(date +%F).log"
       echo '```'
       echo '</details>'
-    } >>"$GITHUB_STEP_SUMMARY"
+    }
+    # >>"$GITHUB_STEP_SUMMARY"
     fi
 
     if [[ -f "${MCIX_LOG_DIR}/exception.$(date +%F).log" ]]; then
@@ -172,7 +174,8 @@ write_step_summary() {
       cat "${MCIX_LOG_DIR}/exception.$(date +%F).log"
       echo '```'
       echo '</details>'
-    } >>"$GITHUB_STEP_SUMMARY"
+    }
+    # >>"$GITHUB_STEP_SUMMARY"
     fi
 #  } >> "$GITHUB_STEP_SUMMARY"
 }
