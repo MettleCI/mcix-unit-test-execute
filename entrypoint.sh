@@ -150,6 +150,8 @@ write_step_summary() {
 
   find / -name "cli.*.log" -ls
 
+  echo "looking for ${MCIX_LOG_DIR}/cli.$(date +%F).log"
+
   if [[ -f "${MCIX_LOG_DIR}/cli.$(date +%F).log" ]]; then
     {
       # Display the contents of the mcix command's log file. (collapsed by default)
