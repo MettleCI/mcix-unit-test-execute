@@ -78,7 +78,7 @@ validate_project
 [ -n "$PROJECT" ]    && set -- "$@" -project "$PROJECT"
 [ -n "$PROJECT_ID" ] && set -- "$@" -project-id "$PROJECT_ID"
 
-set -- "$@" -include-job-in-test-name
+set -- "$@" -include-asset-in-test-name
 
 # Optional flags
 
