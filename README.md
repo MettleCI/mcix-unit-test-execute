@@ -29,8 +29,8 @@ Run DataStage unit tests managed by MCIX as part of CI/CD.
 | project                | Conditional | Project name |
 | project-id             | Conditional | Project ID |
 | max-concurrency        | Optional | Concurrency level |
-| included-tags          | Optional | Include tags |
-| excluded-tags          | Optional | Exclude tags |
+| include-tags          | Optional | Include tags |
+| exclude-tags          | Optional | Exclude tags |
 | test-suite             | Optional | Suite name |
 | ignore-test-failures   | Optional | Bool |
 
@@ -84,7 +84,7 @@ jobs:
           # max-concurrency: 8
           # test-suite: mcix tests
           # run-all: True
-          # additionalArgs: <optional>
+          # additional-args: <optional>
 ```
 
 ---
@@ -110,7 +110,7 @@ jobs:
 | `max-concurrency` | ❌ | 8 | Maximum number of concurrently executing test case jobs to run |
 | `test-suite` | ❌ | mcix tests | The test suite name for this invocation of unit testing |
 | `run-all` | ❌ | True | Skips incremental behavior and runs all unit tests (true/false) |
-| `additionalArgs` | ❌ |  | Additional raw arguments to append to the mcix command |
+| `additional-args` | ❌ |  | Additional raw arguments to append to the mcix command |
 
 ---
 
