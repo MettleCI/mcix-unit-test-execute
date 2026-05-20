@@ -54,8 +54,8 @@ inputs:
   # Output assets
   report:
     description: 'Path to output the compile report'
-    required: true
-    default: "./test-report.xml"
+    required: false
+    default: "reports/unit-test-report.xml"
 
   # Behavioral options
   ignore-test-failures:
