@@ -80,9 +80,9 @@ jobs:
           api-key: <required>
           url: <required>
           user: <required>
-          report: <required>
           # project: <optional>
           # project-id: <optional>
+          # report: reports/unit-test-report.xml
           # ignore-test-failures: false
           # max-concurrency: 8
           # test-suite: mcix tests
@@ -108,7 +108,7 @@ jobs:
 | `user` | ✅ |  | Username for authentication |
 | `project` | ❌ |  | DataStage project name |
 | `project-id` | ❌ |  | DataStage project id |
-| `report` | ✅ | ./test-report.xml | Path to output the compile report |
+| `report` | ❌ | reports/unit-test-report.xml | Path to output the compile report |
 | `ignore-test-failures` | ❌ | false (if omitted) | Ignore test failures (always return 0)? (true/false) |
 | `max-concurrency` | ❌ | 8 | Maximum number of concurrently executing test case jobs to run |
 | `test-suite` | ❌ | mcix tests | The test suite name for this invocation of unit testing |
